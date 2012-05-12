@@ -238,7 +238,12 @@ void getTlcPerson(const int companyId) {
 	PQclear(res);
 	res = NULL;
 	//==========================================================================
-	sprintf(queryBuff, "select pid from memberships where cid = %d and points = %s order by pid", companyId, val);
+	sprintf(queryBuff, "select pid from memberships where cid = %d "
+			"and points in ( "
+			"(select "
+				"distinct points "
+			"from "
+				"(select * from memberships where cid = %d) as fmsps order by points desc) )", companyId, val);
 	SAFE_SELECT(res, queryBuff);
 	printf(TLC_PERSON_HEADER);
 	for (row = 0; row < PQntuples(res); row++) 
