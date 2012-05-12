@@ -81,6 +81,9 @@ void firstQuery()
 	}
 	DEBUG("Succeeded: firstQuery\n");
 	printPgTable(res);
+	
+	PQclear(res);
+	res = NULL;
 }
 
 void printPgTable(PGresult* tbl)
@@ -129,13 +132,13 @@ void printPgTable(PGresult* tbl)
 			}
 			
 		}
-		DEBUG("ROW STR: %s\n", rowString);
+		//DEBUG("ROW STR: %s\n", rowString);
 	
 		sprintf(tableString, "%s| %s |\n%s\n", tableString, rowString, horizontalSeparator);
 		rowString[0] = '\0';
 	}
-	
-	printf(tableString);
+	printf("%s\n", horizontalSeparator);
+	printf("%s\n", tableString);
 }
 
 int printPgTitle(PGresult* tbl)
