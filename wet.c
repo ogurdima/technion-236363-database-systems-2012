@@ -210,6 +210,8 @@ void forbidMembership(const int personId, const int companyId) {
 }
 
 void getTlcPerson(const int companyId) {
+
+	//Right way: select * from memberships m1 where 2 = (select count (distinct m2.points) from memberships m2 where m2.points > m1.points);
 	PGresult* res = NULL;
 	char queryBuff[1024] = "";
 	char*  val = NULL;
@@ -326,12 +328,4 @@ where ( \
 	printf(ADDRESSES_HEADER);
 	for (row = 0; row < PQntuples(res); row++) 
 	{
-		printf(ADDRESSES_LINE, PQgetvalue(res, row, 0));
-	}
-	PQclear(res);
-	res = NULL;
-}
-void pyramidBonus(const int companyId, const unsigned height) {
-	DEBUG("Called: pyramidBonus\n");
-}
-
+		printf(ADDRESSES_LINE, PQgetvalue(res, row,                                                                                                                                                                                                                                     
