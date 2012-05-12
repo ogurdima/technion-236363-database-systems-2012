@@ -120,12 +120,38 @@ void newInvitedMember(const int personId, const int companyId, const int invited
 	int col = 0;
 	char queryBuff[1024] = "";
 	DEBUG("Called: newInvitedMember\n");
+	
 	//==========================================================================
-	sprintf(queryBuff, "select * from person where pid = %d", personId);
+	sprintf(queryBuff, "select * from person where pid = %d", invitedBy);
 	SAFE_SELECT(res, queryBuff);
 	QUERY_CHECK_NOT_EXISTS(res, ILL_PARAMS);
 	PQclear(res); res = NULL;
-	DEBUG("newMember: person exists\n");
+	DEBUG("newInvitedMember: invite guy exists\n");
+	//==========================================================================
+	
+	sprintf(queryBuff, "select * from memberships where pid = %d and cid = %d", personId, companyId);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_EXISTS(res, EXISTING_RECORD);
+	PQclear(res); res = NULL;
+	DEBUG("newInvitedMember: record does not exist\n");
+	//==========================================================================
+	
+	newMember(personId, companyId);
+	sprintf(queryBuff, "select * from memberships where pid = %d and cid = %d", personId, companyId);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_NOT_EXISTS(res, ""); //Does not print anything
+	PQclear(res); res = NULL;
+	DEBUG("newInvitedMember: new record exists\n");
+	//==========================================================================
+	sprintf(queryBuff, "delete from memberships where pid = %d and cid = %d", personId, companyId);
+	DEBUG("Q: %s\n", queryBuff);
+	SAFE_DDL_DML(res, queryBuff);
+	PQclear(res); res = NULL;
+	//==========================================================================
+	sprintf(queryBuff, "insert into memberships (pid, cid, points, invitedby) values (%d, %d, 0, %d)", personId, companyId, invitedBy);
+	DEBUG("Q: %s\n", queryBuff);
+	SAFE_DDL_DML(res, queryBuff);
+	PQclear(res); res = NULL;
 }
 
 void forbidMembership(const int personId, const int companyId)

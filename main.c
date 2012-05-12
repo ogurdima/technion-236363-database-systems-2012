@@ -44,6 +44,8 @@ int main(int argc, char* argv[]) {
 	newMember(20, 57010);
 	getPoints(20);
 	
+	newInvitedMember(21, 57010, 20);
+	
 	freeAllConnections();
 	return 0;
 }
