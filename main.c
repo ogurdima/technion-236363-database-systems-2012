@@ -31,20 +31,40 @@ int main(int argc, char* argv[]) {
 	
 	connectToDb();
 	
-	testCallAllFunctions();
+	//testCallAllFunctions();
 	
 	//firstQuery();
-	getPoints(10);
-	getPoints(11);
-	getPoints(12);
+	//getPoints(10);
+	//getPoints(11);
+	//getPoints(12);
 	//getPoints(24);
 	
-	printf("\n\n\n");
+	//printf("\n\n\n");
 	getPoints(20);
 	newMember(20, 57010);
 	getPoints(20);
-	
+	printf("\n=============================\n");
+	forbidMembership(21, 57010);
 	newInvitedMember(21, 57010, 20);
+	printf("\n=============================\n");
+	
+	getTlcPerson(57010);
+	printf("\n=============================\n");
+	getTlcPerson(57011);
+	
+	printf("\n=============================\n");
+	getFriendliestPeople(0);
+	printf("\n=============================\n");
+	getFriendliestPeople(1);
+	printf("\n=============================\n");
+	getFriendliestPeople(10);
+	printf("\n=============================\n");
+	getMembersAddresses(57010);
+	printf("\n=============================\n");
+	getMembersAddresses(57011);
+	printf("\n=============================\n");
+	
+	
 	
 	freeAllConnections();
 	return 0;
