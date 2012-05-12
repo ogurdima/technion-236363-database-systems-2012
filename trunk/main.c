@@ -33,7 +33,16 @@ int main(int argc, char* argv[]) {
 	
 	testCallAllFunctions();
 	
-	firstQuery();
+	//firstQuery();
+	getPoints(10);
+	getPoints(11);
+	getPoints(12);
+	//getPoints(24);
+	
+	printf("\n\n\n");
+	getPoints(20);
+	newMember(20, 57010);
+	getPoints(20);
 	
 	freeAllConnections();
 	return 0;
@@ -85,6 +94,7 @@ void firstQuery()
 	PQclear(res);
 	res = NULL;
 }
+
 
 void printPgTable(PGresult* tbl)
 {
