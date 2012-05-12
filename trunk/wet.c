@@ -63,7 +63,7 @@ void getPoints(const int personId)
 	QUERY_CHECK_NOT_EXISTS(res, ILL_PARAMS);
 	PQclear(res); res = NULL;
 	//==========================================================================
-	sprintf(queryBuff, "select cid, points from memberships where pid = %d", personId);
+	sprintf(queryBuff, "select cid, points from memberships where pid = %d order by cid", personId);
 	SAFE_SELECT(res, queryBuff);
 	QUERY_CHECK_NOT_EXISTS(res, EMPTY);
 	//==========================================================================
