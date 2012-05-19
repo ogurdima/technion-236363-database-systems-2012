@@ -211,7 +211,7 @@ void forbidMembership(const int personId, const int companyId) {
 
 void getTlcPerson(const int companyId) {
 
-	//Right way: select * from memberships m1 where 2 = (select count (distinct m2.points) from memberships m2 where m2.points > m1.points);
+	//Right way: select pid from memberships m1 where 2 = (select count (distinct m2.points) from memberships m2 where m2.points > m1.points);
 	PGresult* res = NULL;
 	char queryBuff[1024] = "";
 	char*  val = NULL;
@@ -234,16 +234,21 @@ void getTlcPerson(const int companyId) {
 		PQclear(res); res = NULL;	
 		return;						
 	}
-	val = PQgetvalue(res, 2, 0);
 	PQclear(res);
 	res = NULL;
 	//==========================================================================
-	sprintf(queryBuff, "select pid from memberships where cid = %d "
-			"and points in ( "
-			"(select "
-				"distinct points "
-			"from "
-				"(select * from memberships where cid = %d) as fmsps order by points desc) )", companyId, val);
+	sprintf(queryBuff, 
+	"\
+select pid \
+from memberships m1 \
+where 2 = (\
+	select count (distinct m2.points) \
+	from memberships m2 \
+	where 	m2.points > m1.points \
+			and m1.cid = m2.cid \
+			and m1.cid = %d \
+	) \
+order by pid", companyId);
 	SAFE_SELECT(res, queryBuff);
 	printf(TLC_PERSON_HEADER);
 	for (row = 0; row < PQntuples(res); row++) 
@@ -331,6 +336,93 @@ where ( \
 	SAFE_SELECT(res, queryBuff);
 	QUERY_CHECK_NOT_EXISTS(res, EMPTY);
 	printf(ADDRESSES_HEADER);
-	for (row = 0; row < PQntuples(res); row++) 
+	for (row = 0; row < PQntuples(res); row++)
 	{
-		printf(ADDRESSES_LINE, PQgetvalue(res, row,                                                                                                                                                                                                                                     
+		printf(ADDRESSES_LINE, PQgetvalue(res, row, 0));
+	}
+}
+
+
+
+
+
+
+void pyramidBonus(const int companyId, const unsigned height)
+{
+	PGresult* res = NULL;
+	char queryBuff[1024*1024] = "";
+	char singleQuery[1024] = "";
+	char parantheseseFix[1024] = "";
+	char*  val = NULL;
+	int i = 0;
+	int row = 0;
+	DEBUG("Called: pyramidBonus, height=%d\n", height);
+	/*
+	
+	//==========================================================================
+	sprintf(queryBuff, "select * from company where cid = %d", companyId);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_NOT_EXISTS(res, ILL_PARAMS);
+	PQclear(res);
+	res = NULL;
+	DEBUG("getMembersAddresses: company exists\n");
+	//==========================================================================
+	*/
+	if (0 == height)
+	{
+		return;
+	}
+	
+	sprintf(singleQuery, "select m.pid from memberships m where m.cid = %d ", companyId);
+	// update memberships s set s.points = s.points + sum(m.points) from memberships m where m.cid = %d and m.pid in (
+	sprintf(queryBuff, "select p.pid, sum(s.points) from memberships s, person p where s.cid = %d and s.pid in (%s", companyId, singleQuery);
+	for (i = height-1; i > 0; i--)
+	{
+		sprintf(queryBuff, "%s and (m.invitedby=p.pid or m.invitedby in (%s)", queryBuff, singleQuery);
+	}
+	sprintf(queryBuff, "%s and m.invitedby=p.pid)", queryBuff);
+	for (i = height-1; i > 0; i--)
+	{
+		sprintf(parantheseseFix, "%s)", parantheseseFix);
+	}
+	sprintf(queryBuff, "%s%s", queryBuff, parantheseseFix);
+	sprintf(queryBuff, "%s group by p.pid", queryBuff);
+	DEBUG("\n\n%s\n\n", queryBuff);
+	
+}
+
+/*
+
+N
+
+select p.pid from person p where exists (select p2.pid from person where)
+
+F(0):
+select mpid from memberships m where m.invitedby isnull
+
+F(N): 
+select pid from memberships m where exists (select m2.pid from memberships m2 where m.pid.invitedby = m2.pid and m2.pid in F(N-1))
+
+a
+
+select sum(m.points) from memberships m where m.cid = companyId and m.pid in F(pid, N):
+
+select p.pid from person p, memberships m where m.cid = companyId and m.pid = p.pid and ((m.invitedby = this) or m.invitedby in F(this, N-1))
+
+
+select m.pid from memberships m where m.cid = companyId and m.invitedby in F(this, N-1)
+
+
+
+
+select sum ( F(this, N) )
+
+select p.pid from person p, memberships m where m.pid = p.pid and ((m.invitedby = 10) or m.invitedby in (select p.pid from person p, memberships m where m.pid = p.pid and (m.invitedby = 10))
+
+where
+
+select sum(s.points) from memberships s where s.cid = 57010 and s.pid in (select m.pid from memberships m where m.cid = 57010  and m.invitedby in (select m.pid from memberships m where m.cid = 57010  and m.invitedby=s.pid))
+
+*/
+
+

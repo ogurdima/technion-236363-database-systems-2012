@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 	getMembersAddresses(57011);
 	printf("\n=============================\n");
 	
-	
+	pyramidBonus(57010, 3);
 	
 	freeAllConnections();
 	return 0;
