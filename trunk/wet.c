@@ -12,7 +12,7 @@
 #define DEBUG(...) ;
 #endif
 
-extern PGconn* conn;
+PGconn* conn;
 
 #define SAFE_SELECT(res, query) 	res = PQexec((conn), (query)); 							\
 									if (!res || (PQresultStatus(res) != PGRES_TUPLES_OK)) 	\
@@ -48,15 +48,37 @@ extern PGconn* conn;
 
 //indentCorrection
 
-#ifndef WET__DBG
+//#ifndef WET__DBG
+
+void connectToDb()
+{
+	char buff[1024] = "";
+	sprintf(buff, "host=pgsql.cs.technion.ac.il dbname=%s user=%s password=%s", USERNAME, USERNAME, PASSWORD);
+	conn = PQconnectdb(buff);
+	if (!conn || PQstatus(conn) == CONNECTION_BAD) {
+		fprintf(stdout, "Connection to server failed: %s\n", PQerrorMessage(conn));
+		PQfinish(conn);
+		exit(1);
+	}
+}
+
+void freeAllConnections()
+{
+	PQfinish(conn);
+	conn = NULL;
+}
 
 int main(int argc, char* argv[])
 {
+	DEBUG("Parse Start\n");
+	connectToDb();
 	parseInput();
+	freeAllConnections();
+	DEBUG("Parse End\n");
 	return 0;
 }
 
-#endif
+//#endif
 
 void getPoints(const int personId) {
 	PGresult* res = NULL;
@@ -134,35 +156,58 @@ void newInvitedMember(const int personId, const int companyId, const int invited
 	int row = 0;
 	int col = 0;
 	char queryBuff[1024] = "";
-	DEBUG("Called: newInvitedMember\n");
 	
+	//==========================================================================
+	sprintf(queryBuff, "select * from person where pid = %d", personId);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_NOT_EXISTS(res, ILL_PARAMS);
+	PQclear(res);
+	res = NULL;
+	DEBUG("newInvitedMember: invited guy exists\n");
+	//==========================================================================
+	sprintf(queryBuff, "select * from company where cid = %d", companyId);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_NOT_EXISTS(res, ILL_PARAMS);
+	PQclear(res);
+	res = NULL;
+	DEBUG("newInvitedMember: company exists\n");
 	//==========================================================================
 	sprintf(queryBuff, "select * from person where pid = %d", invitedBy);
 	SAFE_SELECT(res, queryBuff);
 	QUERY_CHECK_NOT_EXISTS(res, ILL_PARAMS);
 	PQclear(res);
 	res = NULL;
-	DEBUG("newInvitedMember: invite guy exists\n");
+	DEBUG("newInvitedMember: invitee guy exists\n");
+	//==========================================================================
+	sprintf(queryBuff, "select * from forbidden where pid = %d and cid = %d",
+			personId, companyId);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_EXISTS(res, ILL_PARAMS);
+	PQclear(res);
+	res = NULL;
+	DEBUG("newInvitedMember: not forbidden\n");
 	//==========================================================================
 	
+	//==========================================================================
+	sprintf(queryBuff, "select * from memberships where pid = %d and cid = %d", invitedBy, companyId);
+	DEBUG("newInvited: %s\n", queryBuff);
+	SAFE_SELECT(res, queryBuff);
+	QUERY_CHECK_NOT_EXISTS(res, ILL_INVITATION);
+	PQclear(res); res = NULL;
+	DEBUG("newInvitedMember: man is a fool\n");
+	if (personId == invitedBy)
+	{
+		printf(ILL_INVITATION);
+		PQclear(res); res = NULL;
+		return;
+	}
+	//==========================================================================
 	sprintf(queryBuff, "select * from memberships where pid = %d and cid = %d", personId, companyId);
+	DEBUG("newInvited: %s\n", queryBuff);
 	SAFE_SELECT(res, queryBuff);
 	QUERY_CHECK_EXISTS(res, EXISTING_RECORD);
 	PQclear(res); res = NULL;
 	DEBUG("newInvitedMember: record does not exist\n");
-	//==========================================================================
-	
-	newMember(personId, companyId);
-	sprintf(queryBuff, "select * from memberships where pid = %d and cid = %d", personId, companyId);
-	SAFE_SELECT(res, queryBuff);
-	QUERY_CHECK_NOT_EXISTS(res, ""); //Does not print anything
-	PQclear(res); res = NULL;
-	DEBUG("newInvitedMember: new record exists\n");
-	//==========================================================================
-	sprintf(queryBuff, "delete from memberships where pid = %d and cid = %d", personId, companyId);
-	DEBUG("Q: %s\n", queryBuff);
-	SAFE_DDL_DML(res, queryBuff);
-	PQclear(res); res = NULL;
 	//==========================================================================
 	sprintf(queryBuff, "insert into memberships (pid, cid, points, invitedby) values (%d, %d, 0, %d)", personId, companyId, invitedBy);
 	DEBUG("Q: %s\n", queryBuff);
@@ -273,16 +318,16 @@ void getFriendliestPeople(const unsigned peopleNum) {
 	int row = 0;
 	DEBUG("Called: getFriendliestPeople\n");
 	sprintf(queryBuff, " \
-select pid, lastname, firstname, \
-count( (select distinct m.pid from memberships m where m.invitedby = person.pid) ) + \
-count( (select distinct m.invitedby from memberships m where m.pid = person.pid ) ) \
-as num  \
-from  \
-	person  \
+select p1.pid, p1.lastname, p1.firstname, count(distinct(q1.pid) ) as num \
+from person p1 left outer join memberships q1 \
+on \
+( q1.invitedby = p1.pid) \
+or \
+(q1.pid in (select m.invitedby from memberships m where m.pid = p1.pid and m.invitedby is not null)) \
 group by \
-	pid, lastname, firstname \
+	p1.pid, p1.lastname, p1.firstname \
 order by \
-	num desc , pid \
+	num desc , p1.pid \
 limit %d \
 	", peopleNum);
 	SAFE_SELECT(res, queryBuff);
@@ -318,7 +363,7 @@ void getMembersAddresses(const int companyId) {
 	DEBUG("getMembersAddresses: company exists\n");
 	//==========================================================================
 	sprintf(queryBuff, " \
-	select  \
+	select distinct \
 	p.address  \
 from  \
 	person p  \
@@ -340,6 +385,7 @@ where ( \
 				f.cid = %d and f.pid = p1.pid  \
 		) ) \
 ) \
+order by p.address \
 	", companyId, companyId);
 	SAFE_SELECT(res, queryBuff);
 	QUERY_CHECK_NOT_EXISTS(res, EMPTY);
@@ -381,9 +427,9 @@ void pyramidBonus(const int companyId, const unsigned height)
 update memberships set points = ( select sum( coalesce (points, 0) ) \
 from memberships s \
 where s.cid = %d and ( s.pid=memberships.pid", companyId);
-	for (i = height-1; i > 0; i--)
+	for (i = height; i > 0; i--)
 	{
-		if (i == height - 1)
+		if (i == height)
 		{
 			// First call is on s.pid, not on invitedby
 			sprintf(queryBuff, "%s or s.pid in %s", queryBuff, singleQuery);
@@ -400,58 +446,12 @@ where s.cid = %d and ( s.pid=memberships.pid", companyId);
 	DEBUG("\n\n%s\n\n", queryBuff);
 	//==========================================================================
 	// Executing the query
-	/*
+	
 	SAFE_DDL_DML(res, queryBuff);
 	PQclear(res);
 	res = NULL;
-	*/
+	
 }
 
-/*
-
-update memberships set points = ( select sum( coalesce (points, 0) ) from memberships where memberships.cid = 57010 and ( memberships.pid=pid or memberships.pid in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid or m.invitedby in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid))))))
-
-
-
-select sum ( F(this, N) )
-
-select p.pid from person p, memberships m where m.pid = p.pid and ((m.invitedby = 10) or m.invitedby in (select p.pid from person p, memberships m where m.pid = p.pid and (m.invitedby = 10))
-
-where
-
-select sum(s.points) from memberships s where s.cid = 57010 and s.pid in (select m.pid from memberships m where m.cid = 57010  and m.invitedby in (select m.pid from memberships m where m.cid = 57010  and m.invitedby=s.pid))
-
-(select coalesce(sum(points), 0) from memberships m where m.invitedby = 10 or m.invitedby in ( select pid from memberships m where m.invitedby = 10 or m.invitedby in (select pid from memberships m where m.invitedby = 10) ));
-
-
-
-
-
-
-
-update memberships set points = ( select sum( coalesce (points, 0) ) 
-from memberships 
-where memberships.cid = 57010 and ( memberships.pid=10 or memberships.pid in 
-
-(select s.pid from memberships s where s.cid = 57010 and (s.invitedby=10 or s.invitedby in 
-
-(
-
-select s.pid from memberships s where s.cid = 57010 and  (s.invitedby=10) 
-
-)
-
-)
-
-)
-
-)
-
-)
-
-
-update memberships set points = ( select sum( coalesce (points, 0) ) from memberships where memberships.cid = 57010 and ( memberships.pid=pid or m.invitedby in  or memberships.pid in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid or m.invitedby in  or memberships.pid in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid))))))
-
-*/
 
 
