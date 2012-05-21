@@ -4,7 +4,7 @@
 #include <libpq-fe.h>
 #include "wet.h"
 
-#define MAIN__DBG
+//#define MAIN__DBG
 
 #ifdef MAIN__DBG
 #define DEBUG(...) printf(__VA_ARGS__);
@@ -13,7 +13,6 @@
 #define DEBUG(...) ;
 #endif
 
-#define FL 8
 
 void testCallAllFunctions();
 void connectToDb();
@@ -25,6 +24,8 @@ int getPgMaxColStrSize(PGresult* tbl, int i);
 
 
 PGconn *conn = NULL;
+
+#ifdef MAIN__DBG
 
 int main(int argc, char* argv[]) {
 	DEBUG("Called: main\n");
@@ -64,11 +65,16 @@ int main(int argc, char* argv[]) {
 	getMembersAddresses(57011);
 	printf("\n=============================\n");
 	
+	pyramidBonus(57010, 0);
+	pyramidBonus(57010, 1);
+	pyramidBonus(57010, 2);
 	pyramidBonus(57010, 3);
-	
+	pyramidBonus(57010, 100);
 	freeAllConnections();
 	return 0;
 }
+
+#endif
 
 void connectToDb()
 {
@@ -116,7 +122,6 @@ void firstQuery()
 	PQclear(res);
 	res = NULL;
 }
-
 
 void printPgTable(PGresult* tbl)
 {

@@ -1,0 +1,24 @@
+1. Connect to csl1, and put these files in one folder:
+'wet.c' 'wet.h', 'parser.c', 'build_tables', 'alex_test.in', 'alex_test.sol'.
+
+2. Use 'cd' to nevigate to this folder.
+   
+3. Connect to psql, and execute:
+\i build_tables
+* you need to execute this command each time before running the test!!  
+   
+3. Get back to csl1 and execute:
+gcc -I/usr/local/pgsql/include -L/usr/local/pgsql/lib -lpq -o wet wet.c parser.c
+setenv LD_LIBRARY_PATH /usr/local/pgsql/lib
+./wet < alex_test.in >& alex_test.out
+diff -w alex_test.out alex_test.sol
+
+
+==================
+==================
+
+//to restore course's tables, use this commands on psql:
+DROP TABLE person; CREATE TABLE person AS SELECT * FROM course_person;
+DROP TABLE company; CREATE TABLE company AS SELECT * FROM course_company;
+DROP TABLE memberships; CREATE TABLE memberships AS SELECT * FROM course_memberships;
+DROP TABLE forbidden; CREATE TABLE forbidden AS SELECT * FROM course_forbidden;
