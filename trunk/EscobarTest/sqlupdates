@@ -1,0 +1,21 @@
+ DROP TABLE memberships;
+ DROP TABLE person;
+ DROP TABLE forbidden; 
+ CREATE TABLE memberships AS SELECT * FROM course_memberships;
+ CREATE TABLE forbidden AS SELECT * FROM course_forbidden;
+ CREATE TABLE person AS SELECT * FROM course_person;
+INSERT INTO person VALUES  ( 41,'tito', 'trantula', 'Greece');
+INSERT INTO person VALUES  ( 42,'zoro', 'nomore', 'Spain');
+INSERT INTO person VALUES  ( 43,'u must be', 'tellin da truth', 'daMoon');
+INSERT INTO person VALUES  ( 44,'Dr', 'Jimi', 'Eygpt');
+INSERT INTO person VALUES  ( 45,'Pregnant', 'Mary', 'Holand');
+INSERT INTO person VALUES  ( 46,'holy', 'weed', 'USA');
+INSERT INTO person VALUES  ( 47,'Pablo', 'Escobar', 'Mexico');
+INSERT INTO memberships VALUES (41,57010, 10, 101);
+INSERT INTO memberships VALUES (42,57010, 41, 202);
+INSERT INTO memberships VALUES (43,57010, 42, 312);
+INSERT INTO memberships VALUES (44,57010, 43, 333);
+INSERT INTO memberships VALUES (45,57010, 44, 444);
+INSERT INTO memberships VALUES (46,57010, 45, 555);
+INSERT INTO memberships VALUES (47,57010, 46, 666);
+

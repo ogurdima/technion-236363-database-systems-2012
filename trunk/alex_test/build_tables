@@ -1,0 +1,36 @@
+--Build 'person' table;
+DELETE FROM person;
+INSERT INTO person VALUES (10, 'John', 'Doe', 'Haifa');
+INSERT INTO person VALUES (11, 'Jane', 'Doe', 'Herzliya');
+INSERT INTO person VALUES (12, 'Jane', 'Roe', 'Haifa');
+INSERT INTO person VALUES (13, 'Ham', 'ster', 'ky');
+INSERT INTO person VALUES (14, 'yo', 'ssi', 'kt');
+INSERT INTO person VALUES (15, 'ta', 'ki', 'Eilat');
+INSERT INTO person VALUES (16, 'bub', 'lil', 'Yaffo');
+INSERT INTO person VALUES (17, 'di', 'ma', 'Tel-Aviv');
+INSERT INTO person VALUES (18, 'miki', 'mouse', 'Krayot');
+INSERT INTO person VALUES (19, 'johnny', 'doie', 'Krayot');
+
+--Build 'company' table;
+DELETE FROM company;
+INSERT INTO company VALUES (57010, 'All for Dogs', 'Haifa');
+INSERT INTO company VALUES (57011, 'All for Cats', 'Haifa');
+INSERT INTO company VALUES (57012, 'All for Zombies', 'Heaven');
+INSERT INTO company VALUES (57013, 'All for Ladybugs', 'Eilat');
+
+--Build 'memberships' table;
+DELETE FROM memberships;
+INSERT INTO memberships VALUES (13, 57011, 10, 0);
+INSERT INTO memberships VALUES (18, 57011, 10, 3000);
+INSERT INTO memberships VALUES (12, 57013, NULL, 3000);
+INSERT INTO memberships VALUES (19, 57010, 18, 55);
+INSERT INTO memberships VALUES (10, 57010, NULL, 17600);
+INSERT INTO memberships VALUES (11, 57010, 10, 9700);
+INSERT INTO memberships VALUES (13, 57010, 11, 3000);
+INSERT INTO memberships VALUES (12, 57010, 11, 3000);
+
+--Build 'forbidden' table;
+DELETE FROM forbidden;
+INSERT INTO forbidden VALUES (12, 57011);
+INSERT INTO forbidden VALUES (19, 57011);
+INSERT INTO forbidden VALUES (10, 57011);

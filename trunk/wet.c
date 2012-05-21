@@ -3,10 +3,10 @@
 #include <libpq-fe.h>
 #include "wet.h"
 
-#define WET__DBG
+//#define WET__DBG
 
 #ifdef WET__DBG
-#define DEBUG(...) printf(__VA_ARGS__);
+#define DEBUG(...) printf(__VA_ARGS__); 
 #endif
 #ifndef WET__DBG
 #define DEBUG(...) ;
@@ -46,10 +46,18 @@ extern PGconn* conn;
 												return;						\
 											}
 
-///aaaa
+//indentCorrection
 
+#ifndef WET__DBG
 
-///aaaa
+int main(int argc, char* argv[])
+{
+	parseInput();
+	return 0;
+}
+
+#endif
+
 void getPoints(const int personId) {
 	PGresult* res = NULL;
 	int row = 0;
@@ -121,8 +129,7 @@ void newMember(const int personId, const int companyId) {
 	res = NULL;
 }
 
-void newInvitedMember(const int personId, const int companyId,
-		const int invitedBy) {
+void newInvitedMember(const int personId, const int companyId, const int invitedBy) {
 	PGresult* res = NULL;
 	int row = 0;
 	int col = 0;
@@ -293,6 +300,7 @@ limit %d \
 	PQclear(res);
 	res = NULL;
 }
+
 void getMembersAddresses(const int companyId) {
 	
 	PGresult* res = NULL;
@@ -342,22 +350,16 @@ where ( \
 	}
 }
 
-
-
-
-
-
 void pyramidBonus(const int companyId, const unsigned height)
 {
 	PGresult* res = NULL;
-	char queryBuff[1024*1024] = "";
+	char queryBuff[1024*1024*4] = "";
 	char singleQuery[1024] = "";
-	char parantheseseFix[1024] = "";
+	char parenthesesFix[1024] = "";
 	char*  val = NULL;
 	int i = 0;
 	int row = 0;
 	DEBUG("Called: pyramidBonus, height=%d\n", height);
-	/*
 	
 	//==========================================================================
 	sprintf(queryBuff, "select * from company where cid = %d", companyId);
@@ -367,51 +369,47 @@ void pyramidBonus(const int companyId, const unsigned height)
 	res = NULL;
 	DEBUG("getMembersAddresses: company exists\n");
 	//==========================================================================
-	*/
+	
 	if (0 == height)
 	{
 		return;
 	}
-	
-	sprintf(singleQuery, "select m.pid from memberships m where m.cid = %d ", companyId);
-	// update memberships s set s.points = s.points + sum(m.points) from memberships m where m.cid = %d and m.pid in (
-	sprintf(queryBuff, "select p.pid, sum(s.points) from memberships s, person p where s.cid = %d and s.pid in (%s", companyId, singleQuery);
+	//==========================================================================
+	// Building the query
+	sprintf(singleQuery, "(select s.pid from memberships s where s.cid = %d and (s.invitedby=memberships.pid", companyId);
+	sprintf(queryBuff, "\
+update memberships set points = ( select sum( coalesce (points, 0) ) \
+from memberships s \
+where s.cid = %d and ( s.pid=memberships.pid", companyId);
 	for (i = height-1; i > 0; i--)
 	{
-		sprintf(queryBuff, "%s and (m.invitedby=p.pid or m.invitedby in (%s)", queryBuff, singleQuery);
+		if (i == height - 1)
+		{
+			// First call is on s.pid, not on invitedby
+			sprintf(queryBuff, "%s or s.pid in %s", queryBuff, singleQuery);
+		}
+		else
+		{
+			sprintf(queryBuff, "%s or s.invitedby in %s", queryBuff, singleQuery);
+		}
+		//signleQuery opens two parentheses
+		sprintf(parenthesesFix, "%s))", parenthesesFix);
 	}
-	sprintf(queryBuff, "%s and m.invitedby=p.pid)", queryBuff);
-	for (i = height-1; i > 0; i--)
-	{
-		sprintf(parantheseseFix, "%s)", parantheseseFix);
-	}
-	sprintf(queryBuff, "%s%s", queryBuff, parantheseseFix);
-	sprintf(queryBuff, "%s group by p.pid", queryBuff);
+	sprintf(queryBuff, "%s))", queryBuff);
+	sprintf(queryBuff, "%s%s where cid = %d", queryBuff, parenthesesFix, companyId);
 	DEBUG("\n\n%s\n\n", queryBuff);
-	
+	//==========================================================================
+	// Executing the query
+	/*
+	SAFE_DDL_DML(res, queryBuff);
+	PQclear(res);
+	res = NULL;
+	*/
 }
 
 /*
 
-N
-
-select p.pid from person p where exists (select p2.pid from person where)
-
-F(0):
-select mpid from memberships m where m.invitedby isnull
-
-F(N): 
-select pid from memberships m where exists (select m2.pid from memberships m2 where m.pid.invitedby = m2.pid and m2.pid in F(N-1))
-
-a
-
-select sum(m.points) from memberships m where m.cid = companyId and m.pid in F(pid, N):
-
-select p.pid from person p, memberships m where m.cid = companyId and m.pid = p.pid and ((m.invitedby = this) or m.invitedby in F(this, N-1))
-
-
-select m.pid from memberships m where m.cid = companyId and m.invitedby in F(this, N-1)
-
+update memberships set points = ( select sum( coalesce (points, 0) ) from memberships where memberships.cid = 57010 and ( memberships.pid=pid or memberships.pid in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid or m.invitedby in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid))))))
 
 
 
@@ -422,6 +420,37 @@ select p.pid from person p, memberships m where m.pid = p.pid and ((m.invitedby 
 where
 
 select sum(s.points) from memberships s where s.cid = 57010 and s.pid in (select m.pid from memberships m where m.cid = 57010  and m.invitedby in (select m.pid from memberships m where m.cid = 57010  and m.invitedby=s.pid))
+
+(select coalesce(sum(points), 0) from memberships m where m.invitedby = 10 or m.invitedby in ( select pid from memberships m where m.invitedby = 10 or m.invitedby in (select pid from memberships m where m.invitedby = 10) ));
+
+
+
+
+
+
+
+update memberships set points = ( select sum( coalesce (points, 0) ) 
+from memberships 
+where memberships.cid = 57010 and ( memberships.pid=10 or memberships.pid in 
+
+(select s.pid from memberships s where s.cid = 57010 and (s.invitedby=10 or s.invitedby in 
+
+(
+
+select s.pid from memberships s where s.cid = 57010 and  (s.invitedby=10) 
+
+)
+
+)
+
+)
+
+)
+
+)
+
+
+update memberships set points = ( select sum( coalesce (points, 0) ) from memberships where memberships.cid = 57010 and ( memberships.pid=pid or m.invitedby in  or memberships.pid in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid or m.invitedby in  or memberships.pid in (select s.pid from memberships s where s.cid = 57010 and (s.invitedby=pid))))))
 
 */
 
